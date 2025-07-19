@@ -1,4 +1,4 @@
-from mini_pulsar.client import PulsarClient
+from mini_kafka.client import PubsubClient
 import time
 
 # --- Configuration ---
@@ -9,7 +9,7 @@ CONSUMER_ID = "my-consumer"
 # --- Main Execution ---
 def main():
     # 1. Initialize the client
-    client = PulsarClient(BASE_URL)
+    client = PubsubClient(BASE_URL)
 
     # 2. Create a producer and send a message
     producer = client.create_producer(TOPIC)

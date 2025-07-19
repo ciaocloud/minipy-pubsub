@@ -1,7 +1,6 @@
-
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from mini_pulsar import storage
+from mini_kafka import storage
 
 app = FastAPI()
 

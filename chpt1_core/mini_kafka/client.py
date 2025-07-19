@@ -1,7 +1,7 @@
 
 import requests
 
-class PulsarClient:
+class PubsubClient:
     def __init__(self, base_url: str):
         self.base_url = base_url
 
@@ -18,7 +18,6 @@ class Producer:
     def send(self, data: str):
         response = requests.post(self.url, json={"data": data})
         response.raise_for_status()
-        print(response.json())
         return response.json()["message_id"]
 
 class Consumer:

@@ -1,13 +1,13 @@
 
-# Mini Python Pubsub: A Lightweight Messaging System (Part 1)
+# Mini-Kafka in Python: A Lightweight Messaging System (Part 1)
 
-Building a full-featured distributed messaging system like Apache Kafka/Pulsar is a major undertaking, but we can create a simplified "mini" version in Python to illustrate the core ideas.
+Building a full-featured distributed pub-sub messaging system like Apache Kafka/Pulsar is a major undertaking, but we can create a simplified "mini" version in Python to illustrate the core ideas.
 
 <!-- This tutorial provides an introduction to the first version of Mini Python Pubsub, a lightweight messaging system inspired by Apache Kafka/Pulsar. We'll cover its core concepts, the design process for this initial version, how to use it, and what to expect in the next iteration. -->
 
 ## 1. The Basic Architecture
 
-We designed the first version of MiniPyPubsub with simplicity as the primary goal, and created a single-node system with the following components:
+We designed the first version of Mini-Kafka with simplicity as the primary goal, and created a single-node system with the following components:
    1. A FastAPI-based Server (Broker): A web server (`server.py`) that will receive messages from producers, store them, and deliver them to
    consumers. We chose FastAPI framework for the server due to its ease of use and performance.
    2. A Client Library: A simple Python module (`client.py`) that producers and consumers can use to interact with the server over HTTP.
@@ -26,7 +26,7 @@ Our first version of persistence is very straightforward: each message is saved 
 
 ## 2. Core Concepts
 
-MiniPyPubsub is built around a few key concepts:
+Mini-Kafka in Python is built around a few key concepts:
 
 *   **Topic**: A named channel for sending and receiving messages.  <!-- Producers send messages to topics, and consumers read messages from topics. -->
 
@@ -69,9 +69,9 @@ We'll use a simple but effective file-system-based approach that mimics the log-
  The `storage.py` module will have functions like `write_message(topic, data)` and `read_next_message(topic, consumer_id)`.
 
 
-## 3. How to Use Mini Pulsar
+## 3. How to Use Mini Kafka
 
-Here's how to get Mini Pulsar up and running:
+Here's how to get Mini Kafka up and running:
 
 ### Prerequisites
 
@@ -93,7 +93,7 @@ Here's how to get Mini Pulsar up and running:
 1.  **Start the message broker server**:
 
     ```bash
-    uvicorn mini_pulsar.server:app --host 127.0.0.1 --port 8000
+    uvicorn mini_kafka.server:app --host 127.0.0.1 --port 8000
     ```
 
     The server will now be running and listening for requests.
@@ -110,7 +110,7 @@ Here's how to get Mini Pulsar up and running:
 
 ## 4. Next Steps
 
-This first version of MiniPyPubsub is a great starting point, from which we can understand the core concepts of modern pub/sub systems. 
+This first version of Mini-Kafka in Python is a great starting point, from which we can understand the core concepts of modern pub/sub systems. 
 But there are many ways it could be improved. Here are a few ideas:  
 *   **Formal Subscriptions and Consumer Groups**: Currently, consumers are identified by a simple           `consumer_id`. We could introduce a more formal subscription model where multiple consumers can form a  group to process messages in parallel. Each subscription would have its own cursor, allowing different groups to consume the same topic independently.
 *   **Message Replication**: For high availability, we could replicate topic data across multiple server instances. This would require a mechanism for leader election and data synchronization.
