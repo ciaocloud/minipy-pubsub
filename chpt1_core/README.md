@@ -220,7 +220,7 @@ class Topic:
 ```
 As you can see from the code, we are no longer using the in-memory message lists. Instead, we have:
 1. Topic as a Directory: Each topic will be a directory on the filesystem. For example, a topic named `orders` will be stored in a folder at a path like `./data/orders/`.
-2. Message as a File: Each message sent to a topic will be stored as a separate file within that topic's directory. The files will be named with a sequential, zero-padded integer to represent their order in the log (e.g., `0000000001.msg`, 0000000002.msg`, etc.).
+2. Message as a File: Each message sent to a topic will be stored as a separate file within that topic's directory. The files will be named with a sequential, zero-padded integer to represent their order in the log (e.g., `0000000001.msg`, `0000000002.msg`, etc.).
 3. Append-Only Log: This structure creates an append-only log. New messages are simply new files added to the end of thesequence. This is fast for writes.
 4. Cursor as a File: 
     * The cursor will be a file in the topic directory (e.g., `./data/orders/consumer-a.cursor`) that contains just one piece of information: the ID of the last message that consumer acknowledged.
