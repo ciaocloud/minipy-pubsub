@@ -21,6 +21,24 @@ Mini Pulsar is built around a few key concepts:
 
 *   **Cursor**: A pointer that tracks the last message a consumer has successfully processed (acknowledged). This ensures that a consumer can disconnect and reconnect without losing its place in the message stream.
 
+### Architecture Overview
+
+The Mini Pulsar system follows a classic messaging architecture:
+
+```
++-----------+     +--------+     +-----------+
+| Producer  | --> | Broker | --> | Consumer  |
++-----------+     +--------+     +-----------+
+      ^                 |                ^
+      |                 |                |
+      +-----------------+----------------+
+           Messages flow through Topics
+```
+
+- **Producer**: Sends messages to a specific topic on the Broker.
+- **Broker**: Receives messages from Producers, stores them in segmented logs, and delivers them to subscribed Consumers.
+- **Consumer**: Subscribes to a topic on the Broker and receives messages.
+
 ## 2. The Design Process
 
 We designed Mini Pulsar iteratively, starting with a simple implementation and gradually adding more sophisticated features.

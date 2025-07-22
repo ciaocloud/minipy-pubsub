@@ -1,8 +1,10 @@
-# Mini Pulsar Part 2: Achieving Scalability with a Kafka-Style Architecture
+<!-- # Mini Pulsar Part 2: Achieving Scalability with a Kafka-Style Architecture -->
 
-This document outlines the evolution of Mini Pulsar from a simple, single-file logger into a scalable, parallel messaging system. We will achieve this by adopting the battle-tested design patterns for partitioning and consumption pioneered by Apache Kafka.
+# Mini-Kafka in Python (Part 2): Partitioning and Consumption
 
-## 1. The "Why": The Quest for Parallelism and Flexible Consumption
+This document outlines the evolution of Mini Kafka from a simple, single-file logger into a scalable, parallel messaging system. We will achieve this by adopting the battle-tested design patterns for partitioning and consumption pioneered by Apache Kafka.
+
+## 1. The Quest for Parallelism and Flexible Consumption
 
 Our first model was simple, but it could only ever be processed by one consumer at a time. In the real world, a single producer can easily generate more data than a single consumer can handle. This creates a bottleneck. The goal is to allow multiple consumers to work together on the same topic, but this raises two fundamental questions:
 
@@ -47,16 +49,16 @@ Randomly distributing messages gives us parallelism, but it destroys ordering. T
 *   **The Guarantee:** The server will implement a **partitioner** that ensures that **all messages with the same key always go to the same partition**. 
 *   **The Result:** Since a partition is only ever consumed by one consumer in a group, we can guarantee that all messages for a given key are processed *in order* by a single, dedicated consumer, all while processing messages for other keys in parallel.
 
-## 3. The New Implementation Plan
+<!-- ## 3. The New Implementation Plan
 
 This design requires a significant refactoring of our system:
 
 1.  **`storage.py`**: Will be refactored to manage segmented logs on a per-partition basis.
-2.  **`server.py`**: Will become the "brains" of the operation. It will:
+2.  **`server0.py`**: Will become the "brains" of the operation. It will:
     *   Manage consumer group membership.
     *   Assign partitions to consumers and handle rebalancing.
     *   Implement the key-based partitioner to route messages from producers.
-3.  **`client.py`**: The `producer.send()` method will be updated to accept an optional `key`. The `consumer` will be changed to subscribe with a `group_id`.
+3.  **`client0.py`**: The `producer.send()` method will be updated to accept an optional `key`. The `consumer` will be changed to subscribe with a `group_id`.
 4.  **`example.py`**: Will be rewritten to showcase the new power: it will start multiple consumers in the same group and show how they automatically load-balance the consumption of a topic.
 
-This new architecture will provide a powerful foundation for a truly scalable and flexible messaging system. Once this plan is approved, I will begin the implementation.
+This new architecture will provide a powerful foundation for a truly scalable and flexible messaging system.  -->
