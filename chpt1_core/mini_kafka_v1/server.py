@@ -1,7 +1,6 @@
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 
-
 class Topic:
     def __init__(self, name: str, data_dir: str = "data"):
         self.name = name
