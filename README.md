@@ -1,11 +1,11 @@
 
-# Mini Pulsar: A Lightweight Messaging System
+# Mini Kafka: A Lightweight Messaging System
 
-This document provides an introduction to Mini Pulsar, a lightweight messaging system inspired by Apache Pulsar. We'll cover its core concepts, the design process we followed, how to use it, and potential future improvements.
+This document provides an introduction to Mini Kafka, a lightweight messaging system inspired by Apache Kafka. We'll cover its core concepts, the design process we followed, how to use it, and potential future improvements.
 
 ## 1. Core Concepts
 
-Mini Pulsar is built around a few key concepts:
+Mini Kafka is built around a few key concepts:
 
 *   **Topic**: A named channel for sending and receiving messages. Producers send messages to topics, and consumers read messages from topics.
 
@@ -13,7 +13,7 @@ Mini Pulsar is built around a few key concepts:
 
 *   **Consumer**: A client application that subscribes to a topic to receive messages.
 
-*   **Message**: The unit of data that is sent and received. In our implementation, a message has a unique ID and a payload (the actual data).
+*   **Message**: The unit of data that is sent and received. In our implementation, a message is a structured object (defined in `common.py`) that includes `data`, an optional `key` for partitioning, and assigned `message_id` and `partition_id` after being produced.
 
 *   **Segmented Log**: The storage mechanism used to persist messages. Instead of storing each message as a separate file, messages are grouped into *segments*. Each segment is a log file (`.log`) containing multiple messages. This approach is efficient for both writing and reading messages.
 
@@ -21,9 +21,19 @@ Mini Pulsar is built around a few key concepts:
 
 *   **Cursor**: A pointer that tracks the last message a consumer has successfully processed (acknowledged). This ensures that a consumer can disconnect and reconnect without losing its place in the message stream.
 
+*   **Partition**: A topic is divided into one or more partitions. Each partition is an ordered, immutable sequence of messages. Partitions enable:
+    *   **Scalability**: Distributing topic data across multiple servers.
+    *   **Parallelism**: Allowing multiple producers to write concurrently and multiple consumers to read in parallel.
+    *   **Ordering**: Guaranteeing order only within a single partition.
+
+*   **Consumer Group**: A set of consumers that collectively consume messages from one or more topics.
+    *   **Load Balancing**: Messages from partitions are distributed among consumers in the group, with each partition consumed by only one consumer in the group at a time.
+    *   **Fault Tolerance**: If a consumer fails, its partitions are reassigned to other active consumers in the group.
+    *   **Offset Tracking**: Each consumer group independently tracks its own progress (offsets) for each partition.
+
 ### Architecture Overview
 
-The Mini Pulsar system follows a classic messaging architecture:
+The Mini Kafka system follows a classic messaging architecture:
 
 ```
 +-----------+     +--------+     +-----------+
@@ -35,13 +45,13 @@ The Mini Pulsar system follows a classic messaging architecture:
            Messages flow through Topics
 ```
 
-- **Producer**: Sends messages to a specific topic on the Broker.
-- **Broker**: Receives messages from Producers, stores them in segmented logs, and delivers them to subscribed Consumers.
-- **Consumer**: Subscribes to a topic on the Broker and receives messages.
+- **Producer**: Sends messages to a specific topic on the Broker. Messages are assigned to partitions based on a key or round-robin.
+- **Broker**: Receives messages from Producers, stores them in partitioned segmented logs, and delivers them to subscribed Consumers within consumer groups.
+- **Consumer**: Subscribes to a topic as part of a consumer group and receives messages from assigned partitions.
 
 ## 2. The Design Process
 
-We designed Mini Pulsar iteratively, starting with a simple implementation and gradually adding more sophisticated features.
+We designed Mini Kafka iteratively, starting with a simple implementation and gradually adding more sophisticated features.
 
 ### Step 1: The Basic Idea
 
@@ -53,7 +63,7 @@ Our first version of persistence was very straightforward: each message was save
 
 ### Step 3: Introducing Segments and Indexes
 
-To address the limitations of the simple file-based approach, we refactored the storage layer to use a segmented log architecture. This is the current implementation and is a significant improvement:
+To address the limitations of the simple file-based approach, we refactored the storage layer to use a segmented log architecture. This is a significant improvement:
 
 1.  **Message Abstraction**: We defined a clear structure for messages, including metadata like length, which is crucial for reading a stream of messages from a single file.
 
@@ -63,9 +73,20 @@ To address the limitations of the simple file-based approach, we refactored the 
 
 This iterative process allowed us to build a more robust and performant system while keeping the complexity manageable at each step.
 
-## 3. How to Use Mini Pulsar
+### Step 4: Introducing Partitions, Message Keys and Parallel Producers
 
-Here's how to get Mini Pulsar up and running:
+This step introduced the concept of partitioning topics to enable parallel message production and consumption. 
+Messages can now be sent with an optional `key` which determines the partition they are written to, or distributed using a round-robin strategy.
+
+### Step 5: Introducing Consumer Groups and Parallel Consumers
+
+Building on partitions, this step introduced consumer groups. Consumers can now join a group (with a dedicated `subscribe` API) to collectively consume messages from a topic's partitions, 
+increasing the consumption throughput, enabling load balancing and fault tolerance. 
+The consumer groups are re-balanced for the assignments as each partition could only be consumed by one consumer in the same consumer group.
+
+## 3. How to Use Mini Kafka
+
+Here's how to get Mini Kafka up and running:
 
 ### Prerequisites
 
@@ -86,27 +107,27 @@ Here's how to get Mini Pulsar up and running:
 
 1.  **Start the message broker server**:
 
+    Navigate to the `chpt2_parallel/mini_kafka_v2` directory and run:
+
     ```bash
-    uvicorn pulsar_mini.server:app --host 127.0.0.1 --port 8000
+    uvicorn server:app --host 127.0.0.1 --port 8000 --reload
     ```
 
     The server will now be running and listening for requests.
 
 2.  **Run the example producer and consumer**:
 
-    In a separate terminal, run the `example.py` script:
+    In a separate terminal, navigate to the `chpt2_parallel/mini_kafka_v2` directory and run the `example.py` script:
 
     ```bash
     python example.py
     ```
 
-    You will see output indicating that a message has been sent and then received. You can also inspect the `data/` directory to see the segment and index files that have been created.
+    You will see output demonstrating topic creation with partitions, messages being sent (with their assigned partition IDs), and consumers within a group receiving and acknowledging messages from their assigned partitions. You can also inspect the `data/` directory (within `chpt2_parallel/mini_kafka_v2`) to see the segment and index files that have been created for each partition.
 
 ## 4. Next Step Improvements
 
-Mini Pulsar is a great starting point, but there are many ways it could be improved. Here are a few ideas:
-
-*   **Formal Subscriptions and Consumer Groups**: Currently, consumers are identified by a simple `consumer_id`. We could introduce a more formal subscription model where multiple consumers can form a group to process messages in parallel. Each subscription would have its own cursor, allowing different groups to consume the same topic independently.
+Mini Kafka is a great starting point, but there are many ways it could be improved. Here are a few ideas:
 
 *   **Message Replication**: For high availability, we could replicate topic data across multiple server instances. This would require a mechanism for leader election and data synchronization.
 
@@ -119,4 +140,4 @@ Mini Pulsar is a great starting point, but there are many ways it could be impro
 
 *   **Configuration**: We could add a configuration file to manage settings like the segment size, data directory, and server port.
 
-This tutorial provides a solid foundation for understanding and extending Mini Pulsar. Feel free to experiment with the code and try implementing some of these improvements!
+This tutorial provides a solid foundation for understanding and extending Mini Kafka. Feel free to experiment with the code and try implementing some of these improvements!
