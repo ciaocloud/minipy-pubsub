@@ -6,4 +6,4 @@ class Record(BaseModel):
     value: str
     topic: str
     partition: int = 0
-    offset: int = -1
+    offset: int
