@@ -3,13 +3,13 @@ from mini_kafka_v2.client import Producer, Consumer
 
 BROKER_URL = "http://127.0.0.1:8000"
 TOPIC_NAME = "my_partitioned_topic"
-NUM_PARTITIONS = 5
+NUM_PARTITIONS = 3
 
 # 1. Create a topic with multiple partitions
 print(f"Creating topic '{TOPIC_NAME}' with {NUM_PARTITIONS} partitions...")
 producer_client = Producer(BROKER_URL, "admin_producer")
-# The create_topic endpoint is a POST request, but the client doesn't have a direct method for it.
-# We'll use requests directly for topic creation for simplicity in this example.
+# The create_topic endpoint is a POST request, but a direct method for it locates in Admin in Apache Kafka.
+# We'll directly make HTTP request for topic creation for simplicity in this example.
 import requests
 requests.post(f"{BROKER_URL}/topics/{TOPIC_NAME}/create", params={
     "num_partitions": NUM_PARTITIONS
@@ -21,7 +21,7 @@ time.sleep(1) # Give server a moment to set up
 # 2. Send messages to different partitions
 producer1 = Producer(BROKER_URL, "producer-1")
 print(f"Sending message to topic '{TOPIC_NAME}'...")
-for i in range(10):
+for i in range(60):
     resp = producer1.send(TOPIC_NAME, f"Hello, Mini Kafka! -- {i}")
     message_offset, partition_id = resp["message_offset"], resp["partition_id"]
     print(f"Message sent with offset: {message_offset}, to partition {partition_id}")

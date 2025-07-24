@@ -1,17 +1,56 @@
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 
+class Partition:
+    def __init__(self, topic_name, partition_id, data_dir: str = "data"):
+        self.topic_name = topic_name
+        self.partition_id = partition_id
+        self.partition_dir = Path(data_dir) / topic_name / f"partition_{partition_id}"
+        self.partition_dir.mkdir(parents=True, exist_ok=True)
+
+    def get_cursor_file(self, consumer_id: str) -> Path:
+        return self.partition_dir / f"{consumer_id}.cursor"
+
+    def produce(self, message: str) -> int:
+        """Writes a message to a topic's log and returns the message ID."""
+        # First find the next message ID
+        message_files = sorted(self.partition_dir.glob("*.msg"))
+        next_id = 1
+        if message_files:
+            last_id = int(message_files[-1].stem)
+            next_id = last_id + 1
+
+        message_file = self.partition_dir / f"{next_id:08d}.msg"
+        message_file.write_text(message)
+        return next_id
+
+    def consume(self, consumer_id: str):
+        """Reads the next message for a consumer, based on their cursor."""
+        cursor_file = self.get_cursor_file(consumer_id)
+        last_read_id = 0
+        if cursor_file.exists():
+            last_read_id = int(cursor_file.read_text())
+
+        message_files = sorted(self.partition_dir.glob("*.msg"))
+        for message_file in message_files:
+            message_id = int(message_file.stem)
+            if message_id > last_read_id:
+                return message_id, message_file.read_bytes()
+        return None
+
+    def commit(self, consumer_id: str, message_id: int):
+        """Updates the consumer's cursor to the given message ID."""
+        cursor_file = self.get_cursor_file(consumer_id)
+        cursor_file.write_text(str(message_id))
+
 class Topic:
-    def __init__(self, name: str, num_partitions: int = 1, data_dir: str = "data"):
+    def __init__(self, name: str, num_partitions: int = 1):
         self.name = name
         self.num_partitions = num_partitions
-        self.topic_dir = Path(data_dir) / name
         self.partitions = []
         for i in range(self.num_partitions):
-            partition_dir = self.topic_dir / f"partition_{i}"
-            partition_dir.mkdir(parents=True, exist_ok=True)
-            self.partitions.append(partition_dir)
-        # self.topic_dir.mkdir(parents=True, exist_ok=True)
+            partition = Partition(self.name, i)
+            self.partitions.append(partition)
         self._round_robin_counter = 0
 
     def get_partition(self, key: str | None):
@@ -23,44 +62,8 @@ class Topic:
         else:
             ## simple hash by key
             partition_id = hash(key) % self.num_partitions
-        return partition_id
+        return partition_id, self.partitions[partition_id]
 
-    def get_cursor_file(self, consumer_id: str, partition_id: int) -> Path:
-        return self.partitions[partition_id] / f"{consumer_id}.cursor"
-
-    def produce(self, message: str, partition_id: int) -> int:
-        """Writes a message to a topic's log and returns the message ID."""
-        partition_dir = self.partitions[partition_id]
-        # Find the next message ID
-        message_files = sorted(partition_dir.glob("*.msg"))
-        next_id = 1
-        if message_files:
-            last_id = int(message_files[-1].stem)
-            next_id = last_id + 1
-
-        message_file = partition_dir / f"{next_id:08d}.msg"
-        message_file.write_text(message)
-        return next_id
-
-    def consume(self, consumer_id: str, partition_id: int):
-        """Reads the next message for a consumer, based on their cursor."""
-        partition_dir = self.partitions[partition_id]
-        cursor_file = self.get_cursor_file(consumer_id, partition_id)
-        last_read_id = 0
-        if cursor_file.exists():
-            last_read_id = int(cursor_file.read_text())
-
-        message_files = sorted(partition_dir.glob("*.msg"))
-        for message_file in message_files:
-            message_id = int(message_file.stem)
-            if message_id > last_read_id:
-                return message_id, message_file.read_bytes()
-        return None
-
-    def commit(self, consumer_id: str, partition_id: int, message_id: int):
-        """Updates the consumer's cursor to the given message ID."""
-        cursor_file = self.get_cursor_file(consumer_id, partition_id)
-        cursor_file.write_text(str(message_id))
 
 class ConsumerGroup:
     def __init__(self, group_id: str, topic: Topic):
@@ -117,8 +120,8 @@ def publish_message(topic_name: str, message: str, key: str):
     if not topic_name in TOPICS:
         create_topic(topic_name)
     topic = TOPICS[topic_name]
-    partition_id = topic.get_partition(key)
-    message_offset = topic.produce(message, partition_id)
+    partition_id, partition = topic.get_partition(key)
+    message_offset = partition.produce(message)
     return {"message_offset": message_offset, "partition_id": partition_id}
 
 @app.get("/topics/{topic_name}/messages")
@@ -142,7 +145,7 @@ def consume_messages(topic_name: str, consumer_id: str, group_id: str):
 
     messages = []
     for partition_id in partition_ids:
-        result = topic.consume(consumer_id, partition_id)
+        result = topic.partitions[partition_id].consume(consumer_id)
         if not result:
             continue
             # raise HTTPException(status_code=404, detail="No new messages")
@@ -153,6 +156,6 @@ def consume_messages(topic_name: str, consumer_id: str, group_id: str):
 @app.post("/topics/{topic_name}/messages/{message_offset}/ack")
 def ack(topic_name: str, consumer_id: str, partition_id: int, message_offset: int):
     """Acknowledges a message, updating the consumer's cursor."""
-    topic = TOPICS[topic_name]
-    topic.commit(consumer_id, partition_id, message_offset)
+    partition = TOPICS[topic_name].partitions[partition_id]
+    partition.commit(consumer_id, message_offset)
     return {"status": "ok"}
