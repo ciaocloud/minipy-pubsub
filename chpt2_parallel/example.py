@@ -23,9 +23,8 @@ producer1 = Producer(BROKER_URL, "producer-1")
 print(f"Sending message to topic '{TOPIC_NAME}'...")
 for i in range(10):
     resp = producer1.send(TOPIC_NAME, f"Hello, Mini Kafka! -- {i}")
-    print(resp)
-    message_id, partition_id = resp
-    print(f"Message sent with ID: {message_id}, to partition {partition_id}")
+    message_offset, partition_id = resp["message_offset"], resp["partition_id"]
+    print(f"Message sent with offset: {message_offset}, to partition {partition_id}")
 
 time.sleep(1) # Give server a moment to process messages
 

@@ -1,5 +1,8 @@
+import json
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
+
+from common import Record
 
 class Topic:
     def __init__(self, name: str, num_partitions: int = 1, data_dir: str = "data"):
@@ -28,7 +31,7 @@ class Topic:
     def get_cursor_file(self, consumer_id: str, partition_id: int) -> Path:
         return self.partitions[partition_id] / f"{consumer_id}.cursor"
 
-    def produce(self, message: str, partition_id: int) -> int:
+    def produce(self, record: Record, partition_id: int) -> int:
         """Writes a message to a topic's log and returns the message ID."""
         partition_dir = self.partitions[partition_id]
         # Find the next message ID
@@ -37,9 +40,11 @@ class Topic:
         if message_files:
             last_id = int(message_files[-1].stem)
             next_id = last_id + 1
-
+        record.partition = partition_id
+        record.offset = next_id
         message_file = partition_dir / f"{next_id:08d}.msg"
-        message_file.write_text(message)
+        with open(message_file, 'w') as f:
+            f.write(record.model_dump_json())
         return next_id
 
     def consume(self, consumer_id: str, partition_id: int):
@@ -54,7 +59,10 @@ class Topic:
         for message_file in message_files:
             message_id = int(message_file.stem)
             if message_id > last_read_id:
-                return message_id, message_file.read_bytes()
+                with open(message_file, 'r') as f:
+                    data = json.load(f)
+                    record = Record(**data)
+                return message_id, record
         return None
 
     def commit(self, consumer_id: str, partition_id: int, message_id: int):
@@ -112,16 +120,16 @@ def subscribe_consumer(topic_name: str, group_id: str, consumer_id: str):
     return {"assigned_partitions": consumer_group.get_assignment(consumer_id)}
 
 @app.post("/topics/{topic_name}/messages")
-def publish_message(topic_name: str, message: str, key: str):
+def publish_message(topic_name: str, record: Record):
     """Receives a message from a producer and writes it to the topic's log."""
     if not topic_name in TOPICS:
         create_topic(topic_name)
     topic = TOPICS[topic_name]
-    partition_id = topic.get_partition(key)
+    partition_id = topic.get_partition(record.key)
     print("###", partition_id)
-    message_offset = topic.produce(message, partition_id)
+    message_offset = topic.produce(record, partition_id)
     # print("###", message_offset, partition_id)
-    return {"message_id": message_offset, "partition_id": partition_id}
+    return {"message_offset": message_offset, "partition_id": partition_id}
 
 @app.get("/topics/{topic_name}/messages")
 def consume_messages(topic_name: str, consumer_id: str, group_id: str):
