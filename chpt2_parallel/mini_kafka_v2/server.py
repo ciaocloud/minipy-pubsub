@@ -118,10 +118,8 @@ def publish_message(topic_name: str, message: str, key: str):
         create_topic(topic_name)
     topic = TOPICS[topic_name]
     partition_id = topic.get_partition(key)
-    print("###", partition_id)
     message_offset = topic.produce(message, partition_id)
-    # print("###", message_offset, partition_id)
-    return {"message_id": message_offset, "partition_id": partition_id}
+    return {"message_offset": message_offset, "partition_id": partition_id}
 
 @app.get("/topics/{topic_name}/messages")
 def consume_messages(topic_name: str, consumer_id: str, group_id: str):
@@ -149,12 +147,12 @@ def consume_messages(topic_name: str, consumer_id: str, group_id: str):
             continue
             # raise HTTPException(status_code=404, detail="No new messages")
         message_offset, message = result
-        messages.append({"message_id": message_offset, "data": message, "partition_id": partition_id})
+        messages.append({"message_offset": message_offset, "data": message, "partition_id": partition_id})
     return messages
 
-@app.post("/topics/{topic_name}/messages/{message_id}/ack")
-def ack(topic_name: str, consumer_id: str, partition_id: int, message_id: int):
+@app.post("/topics/{topic_name}/messages/{message_offset}/ack")
+def ack(topic_name: str, consumer_id: str, partition_id: int, message_offset: int):
     """Acknowledges a message, updating the consumer's cursor."""
     topic = TOPICS[topic_name]
-    topic.commit(consumer_id, partition_id, message_id)
+    topic.commit(consumer_id, partition_id, message_offset)
     return {"status": "ok"}

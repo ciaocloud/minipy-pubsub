@@ -23,9 +23,8 @@ producer1 = Producer(BROKER_URL, "producer-1")
 print(f"Sending message to topic '{TOPIC_NAME}'...")
 for i in range(10):
     resp = producer1.send(TOPIC_NAME, f"Hello, Mini Kafka! -- {i}")
-    print(resp)
-    message_id, partition_id = resp
-    print(f"Message sent with ID: {message_id}, to partition {partition_id}")
+    message_offset, partition_id = resp["message_offset"], resp["partition_id"]
+    print(f"Message sent with offset: {message_offset}, to partition {partition_id}")
 
 time.sleep(1) # Give server a moment to process messages
 
@@ -41,11 +40,11 @@ while True:
     msgs = consumer1.poll()
     if msgs:
         for msg in msgs:
-            print(f"  Consumer 1 received from partition {msg['partition_id']}: ID={msg['message_id']}, Data='{msg['data']}'")
+            print(f"  Consumer 1 received from partition {msg['partition_id']}: ID={msg['message_offset']}, Data='{msg['data']}'")
             # 4. Acknowledge the message
-            consumer1.acknowledge(msg['message_id'], msg['partition_id'])
+            consumer1.acknowledge(msg['message_offset'], msg['partition_id'])
             message_count_c1 += 1
-            print(f"Acknowledged message ID: {msg['message_id']}")
+            print(f"Acknowledged message ID: {msg['message_offset']}")
     else:
         break
 print(f"Consumer 1 finished. Received {message_count_c1} messages.")
@@ -58,11 +57,11 @@ while True:
     msgs = consumer2.poll()
     if msgs:
         for msg in msgs:
-            print(f"  Consumer 2 received from partition {msg['partition_id']}: ID={msg['message_id']}, Data='{msg['data']}'")
+            print(f"  Consumer 2 received from partition {msg['partition_id']}: ID={msg['message_offset']}, Data='{msg['data']}'")
             # 4. Acknowledge the message
-            consumer2.acknowledge(msg['message_id'], msg['partition_id'])
+            consumer2.acknowledge(msg['message_offset'], msg['partition_id'])
             message_count_c2 += 1
-            print(f"Acknowledged message ID: {msg['message_id']}")
+            print(f"Acknowledged message ID: {msg['message_offset']}")
     else:
         break
 print(f"Consumer 2 finished. Received {message_count_c2} messages.")
@@ -75,11 +74,11 @@ while True:
     msgs = consumer3.poll()
     if msgs:
         for msg in msgs:
-            print(f"  Consumer 3 received from partition {msg['partition_id']}: ID={msg['message_id']}, Data='{msg['data']}'")
+            print(f"  Consumer 3 received from partition {msg['partition_id']}: ID={msg['message_offset']}, Data='{msg['data']}'")
             # 4. Acknowledge the message
-            consumer3.acknowledge(msg['message_id'], msg['partition_id'])
+            consumer3.acknowledge(msg['message_offset'], msg['partition_id'])
             message_count_c3 += 1
-            print(f"Acknowledged message ID: {msg['message_id']}")
+            print(f"Acknowledged message ID: {msg['message_offset']}")
     else:
         break
 print(f"Consumer 3 finished. Received {message_count_c3} messages.")
