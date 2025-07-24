@@ -3,7 +3,7 @@ from mini_kafka_v2.client import Producer, Consumer
 
 BROKER_URL = "http://127.0.0.1:8000"
 TOPIC_NAME = "my_partitioned_topic"
-NUM_PARTITIONS = 3
+NUM_PARTITIONS = 6
 
 # 1. Create a topic with multiple partitions
 print(f"Creating topic '{TOPIC_NAME}' with {NUM_PARTITIONS} partitions...")
@@ -21,7 +21,7 @@ time.sleep(1) # Give server a moment to set up
 # 2. Send messages to different partitions
 producer1 = Producer(BROKER_URL, "producer-1")
 print(f"Sending message to topic '{TOPIC_NAME}'...")
-for i in range(60):
+for i in range(30):
     resp = producer1.send(TOPIC_NAME, f"Hello, Mini Kafka! -- {i}")
     message_offset, partition_id = resp["message_offset"], resp["partition_id"]
     print(f"Message sent with offset: {message_offset}, to partition {partition_id}")
